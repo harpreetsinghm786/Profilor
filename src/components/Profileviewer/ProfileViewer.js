@@ -1,13 +1,14 @@
 import React from "react";
 import { auth, db } from "../../firebase";
 import { key } from "../../firebase";
-import { ref, onValue, child, set, getDatabase, update } from "@firebase/database";
+import { ref, onValue, child, set, getDatabase, update ,remove} from "@firebase/database";
 import { useState, useEffect, Component } from "react"
 import { Link ,useNavigate} from "react-router-dom";
+import { useLocation } from 'react-router-dom';
 import Login from "../Login/Login";
 
 
-function Profile() {
+function ProfileViewer(props) {
     let navigate = useNavigate();
 
     const [name, setname] = useState(null)
@@ -17,22 +18,11 @@ function Profile() {
     const [linkedin, setlinkedin] = useState('');
     const [instagram, setinstagram] = useState('');
     const [github, setgithub] = useState('');
-
-    const [name2, setname2] = useState(null)
-    const [status2, setStatus2] = useState('')
-    const [linkedin2, setlinkedin2] = useState('');
-    const [instagram2, setinstagram2] = useState('');
-    const [github2, setgithub2] = useState('');
     const [perc, setperc] = useState(40);
-
     const [likes, setlikes] = useState(null);
     const [liked, setliked] = useState(null);
+    const location = useLocation();
 
-    const [error, seterror] = useState(false);
-
-    
-
-    
 
 
 
@@ -59,73 +49,67 @@ function Profile() {
 
     useEffect(() => {
 
-        auth.onAuthStateChanged(async (user) => {
-
-            if (user.isAnonymous) {
-                currentref = ref(db, 'userdata/' + key);
-
-            } else {
-                currentref = ref(db, 'userdata/' + user.uid);
-            }
-
-            onValue(currentref, (snapshot) => {
-                setname(snapshot.child("name").val());
-                seturl(snapshot.child("url").val());
-                setemail(snapshot.child("email").val());
-                setStatus(snapshot.child("status").val());
-                setlinkedin(snapshot.child("linkedin").val());
-                setinstagram(snapshot.child("instagram").val());
-                setgithub(snapshot.child("github").val());
-                setlikes(snapshot.child("likes").val()!=null?Object.keys(snapshot.child("likes").val()).length:0)
-                setliked(snapshot.child("liked").val()!=null?Object.keys(snapshot.child("liked").val()).length:0)
+        currentref = ref(db, 'userdata/' + location.state.id);
 
 
-            });
+        onValue(currentref, (snapshot) => {
+            setname(snapshot.child("name").val());
+            seturl(snapshot.child("url").val());
+            setemail(snapshot.child("email").val());
+            setStatus(snapshot.child("status").val());
+            setlinkedin(snapshot.child("linkedin").val());
+            setinstagram(snapshot.child("instagram").val());
+            setgithub(snapshot.child("github").val());
+            setlikes(snapshot.child("likes").val() != null ? Object.keys(snapshot.child("likes").val()).length : 0)
+            setliked(snapshot.child("liked").val() != null ? Object.keys(snapshot.child("liked").val()).length : 0)
+
+        });
 
 
-            getperc();
+        getperc();
 
-
-
-
-
-        })
-
+        console.log(props);
 
 
     })
 
 
     const signOut = () => {
-        auth.signOut().then(()=>{
-            navigate("/");
-        })
-      
+        auth.signOut();
+        navigate("/");
+        
     }
 
 
-
-
-
-
-    const submitHandler = e => {
-
-        if (status2 != "" && name2 != "") {
-
-            seterror(false);
-            update(currentref, {
-                "status": status2,
-                "instagram": instagram2,
-                "linkedin": linkedin2,
-                "github": github2,
-                "name": name2
+    const handleLikes = () => {
+        var currentref = ref(db, 'userdata/' + location.state.id + "/likes/" + location.state.newUser);
+        onValue(currentref, (snapshot) => {
+          const data = snapshot.val();
+          if (data == null) {
+            set(ref(db, 'userdata/' + location.state.id + "/likes/" + location.state.newUser), {
+              url: url,
+              id: location.state.newUser,
             })
-        }else{
-            seterror(true);
-        }
+    
+            set(ref(db, 'userdata/' + location.state.newUser + "/liked/" + location.state.id), {
+              liked: "true",
+            })
+    
+    
+          } else {
+            remove(ref(db, 'userdata/' + location.state.id+ "/likes/" + location.state.newUser));
+            remove(ref(db, 'userdata/' + location.state.newUser + "/liked/" + location.state.id));
+          }
+        }, {
+          onlyOnce: true
+        });
+    
+      }
 
 
-    }
+
+
+
     return (
 
         <>
@@ -149,7 +133,9 @@ function Profile() {
 
 
                         <div>
-                            <img className='profile-pic' src={url}></img>
+                        <Link style={{ color: 'inherit', textDecoration: 'inherit',cursor:"pointer" }} to="/profile"> <img className='profile-pic' src={location.state.url}></img></Link>
+
+                            
 
                         </div>
                         <div onClick={signOut} className='signout-button' style={{ marginLeft: "10px", width: "100px", color: "grey" }}>Sign Out</div>
@@ -167,7 +153,7 @@ function Profile() {
 
                     <div style={{ flex: "4" }}>
                         <div className='side-line' style={{ width: "270px", marginTop: "20px", justifyContent: "center", alignContent: "center" }}>
-                            <div className='basic-profile' style={{paddingTop:"30px"}}>
+                            <div className='basic-profile' style={{ paddingTop: "30px" }}>
                                 <img className='profilepic' src={url}></img>
                                 <span style={{ color: "black", fontWeight: "800" }}>{name}</span>
                                 <div style={{ height: "5px" }}></div>
@@ -175,16 +161,16 @@ function Profile() {
 
                             </div>
 
-                            <div style={{padding:"10px",color:"black",display:"flex",flexDirection:"row"}}>
-                                <div style={{flex:"1",display:"flex",justifyContent:"center",alignItems:"center",flexDirection:"column"}}>
-                                <span style={{fontSize:"20px",fontWeight:"600"}}>{liked}</span>
-                                <span style={{marginTop:"7px",fontSize:"15px"}}>Liked</span>
+                            <div style={{ padding: "10px", color: "black", display: "flex", flexDirection: "row" }}>
+                                <div style={{ flex: "1", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                    <span style={{ fontSize: "20px", fontWeight: "600" }}>{liked}</span>
+                                    <span style={{ marginTop: "7px", fontSize: "15px" }}>Liked</span>
                                 </div >
-                                <div style={{flex:"1",display:"flex",justifyContent:"center",alignItems:"center",flexDirection:"column"}}>
-                                <span style={{fontSize:"20px",fontWeight:"600"}}>{likes}</span>
-                                    <span style={{marginTop:"7px",fontSize:"15px"}}>Likes</span>
+                                <div style={{ flex: "1", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                    <span style={{ fontSize: "20px", fontWeight: "600" }}>{likes}</span>
+                                    <span style={{ marginTop: "7px", fontSize: "15px" }}>Likes</span>
                                 </div>
-                              
+
                             </div>
 
                             <div style={{
@@ -239,8 +225,15 @@ function Profile() {
                         <div style={{ justifyContent: "start", alignContent: "center", display: "flex", flexDirection: "column", alignItems: "start", marginTop: "20px" }}>
 
 
-                            <span style={{ color: "#0887bd", fontWeight: "600", fontSize: "30px" }}>Profile</span>
+                            <div style={{display:"flex",flexDirection:"row",justifyContent:'space-between',width:"100%"}} >
 
+
+                                <span style={{ color: "#0887bd", fontWeight: "600", fontSize: "30px" }}>Profile</span>
+                                <div style={{ border: "1px solid grey", padding: "5px", borderRadius: "20px", marginTop: "7px", justifyContent: "center", alignItems: "center", alignContent: "center", borderColor: "#0887bd" }}>
+                                    <span onClick={handleLikes} style={{ fontSize: "13px", color: "#0887bd", paddingLeft: "5px", paddingRight: "5px" ,cursor:"pointer"}}> Add to Favoruites</span>
+                                </div>
+
+                            </div>
 
                             <span style={{ color: "black", fontWeight: "600", fontSize: "16px", marginTop: "30px" }}>Basic Profile</span>
 
@@ -250,15 +243,6 @@ function Profile() {
                                 <span style={{ color: "grey", fontWeight: "600" }}>Username : </span>
                                 {name}</div>
 
-                            <div className='name-field' style={{
-                                width: "100%",
-                                backgroundColor: "#DCDCDC", display: "block", marginLeft:
-                                    "0px", borderRadius: "5px", marginTop: "10px", height: "40px"
-
-                            }}>
-                                <input type="text" placeholder='Name' onChange={(e) => setname2(e.target.value)} style={{ flex: "9", border: "null", fontSize: "14px", padding: "10px", backgroundColor: "#DCDCDC", borderRadius: "5px", borderColor: "transparent", outline: "none",width:"100%" }}></input>
-
-                            </div>
 
                             <div style={{ height: "20px" }}></div>
 
@@ -267,15 +251,6 @@ function Profile() {
                                 <span style={{ color: "grey", fontWeight: "600" }}>Status : </span>
                                 {status}</div>
 
-                            <div className='status-field' style={{
-                                width: "100%",
-                                backgroundColor: "#DCDCDC", display: "block", marginLeft:
-                                    "0px", borderRadius: "5px", marginTop: "10px", height: "40px"
-
-                            }}>
-                                <input type="text" placeholder='Status' onChange={(e) => setStatus2(e.target.value)} style={{ flex: "9", border: "null", fontSize: "14px", padding: "10px", backgroundColor: "#DCDCDC", borderRadius: "5px", borderColor: "transparent", outline: "none",width:"100%" }}></input>
-
-                            </div>
 
 
 
@@ -289,15 +264,7 @@ function Profile() {
                                 <span style={{ color: "grey", fontWeight: "600" }}>Linkedin : </span>
                                 {linkedin}</div>
 
-                            <div className='linkedin-field' style={{
-                                width: "100%",
-                                backgroundColor: "#DCDCDC", display: "block", marginLeft:
-                                    "0px", borderRadius: "5px", marginTop: "10px", height: "40px"
 
-                            }}>
-                                <input type="text" placeholder='Linkedin' onChange={(e) => setlinkedin2(e.target.value)} style={{ flex: "9", border: "null", fontSize: "14px", padding: "10px", backgroundColor: "#DCDCDC", borderRadius: "5px", borderColor: "transparent", outline: "none",width:"100%" }}></input>
-
-                            </div>
 
                             <div style={{ height: "20px" }}></div>
 
@@ -306,15 +273,7 @@ function Profile() {
                                 <span style={{ color: "grey", fontWeight: "600" }}>Instagram : </span>
                                 {instagram}</div>
 
-                            <div className='insta-field' style={{
-                                width: "100%",
-                                backgroundColor: "#DCDCDC", display: "block", marginLeft:
-                                    "0px", borderRadius: "5px", marginTop: "10px", height: "40px"
 
-                            }}>
-                                <input type="text" placeholder='Instagram' onChange={(e) => setinstagram2(e.target.value)} style={{ flex: "9", border: "null", fontSize: "14px", padding: "10px", backgroundColor: "#DCDCDC", borderRadius: "5px", borderColor: "transparent", outline: "none",width:"100%" }}></input>
-
-                            </div>
 
                             <div style={{ height: "20px" }}></div>
 
@@ -323,42 +282,12 @@ function Profile() {
                                 <span style={{ color: "grey", fontWeight: "600" }}>Github : </span>
                                 {github}</div>
 
-                            <div className='github-field' style={{
-                                width: "100%",
-                                backgroundColor: "#DCDCDC", display: "block", marginLeft:
-                                    "0px", borderRadius: "5px", marginTop: "10px", height: "40px"
-
-                            }}>
-                                <input type="text" placeholder='Github' onChange={(e) => setgithub2(e.target.value)} style={{ flex: "9", border: "null", fontSize: "14px", padding: "10px", backgroundColor: "#DCDCDC", borderRadius: "5px", borderColor: "transparent", outline: "none" ,width:"100%"}}></input>
-
-                            </div>
-
-                          {
-                           error? <div style={{marginTop:"10px",marginBottom:"10px",padding:"5px",}}>
-                                <span style={{fontSize:"15px",color:"red" }}>Error : Name and Status are required Fields</span>
-                            </div>:
-                            
-                            <div></div>
-                          }
 
 
 
 
 
-                            <div style={{ display: "flex", width: "100px", marginTop: "20px" }} >
 
-                                <button onClick={submitHandler} style={{ flex: "1", height: "40px", backgroundColor: "#0887bd", color: "white", border: "none", borderRadius: "5px", borderBottomRightRadius: "5px", cursor: "pointer", marginTop: "15px" }}>
-
-                                    <div style={{ alignContent: "center" }}>
-
-                                        <span style={{ fontSize: "13px",}} >Save</span>
-
-                                    </div>
-
-                                </button>
-
-
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -375,7 +304,7 @@ function Profile() {
                     </div>
                     <div style={{ color: "black", fontWeight: "bold", fontSize: "20px" }} >Profilor</div>
                 </div>
-                <div style={{justifyContent:"space-between", flex: "6", display: "flex", flexDirection: "row", marginTop: "50px",marginRight:"13%" }}>
+                <div style={{ justifyContent: "space-between", flex: "6", display: "flex", flexDirection: "row", marginTop: "50px", marginRight: "13%" }}>
 
                     <div style={{ display: "flex", flexDirection: "column" }}>
 
@@ -390,7 +319,7 @@ function Profile() {
                         <span style={{ margin: "20px" }}>Network</span>
                         <span style={{ margin: "20px" }}>Safety</span>
                         <span style={{ margin: "20px" }}>Advertisements</span>
-                        
+
                     </div>
 
 
@@ -420,4 +349,4 @@ function Profile() {
 
 };
 
-export default Profile;
+export default ProfileViewer;

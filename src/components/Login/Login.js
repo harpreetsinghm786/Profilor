@@ -5,24 +5,8 @@ import {useState,useEffect} from "react"
 
 function Login(){
     
-  const [user,setUser]=useState(null)
-
-  
-  
-  
-  useEffect(()=>{
-    auth.onAuthStateChanged(async (user)=>{
-      setUser(user)
-   
-    })
-  })
-
-
- 
-  
   return (
     <div >
-  
           <div className='screen' >
             <div style={{flex:"5",
                   alignItems:"left",
